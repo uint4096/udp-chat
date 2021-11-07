@@ -1,4 +1,4 @@
-import { Address, RelayMessage } from "../../utils/types";
+import { Address, ClientMessage, RelayMessage } from "../../utils/types";
 import { Socket } from "dgram";
 
 export const messageHelpers = (username: string, socket: Socket, relayId: string) => {
@@ -27,7 +27,7 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
         port: Number(nodeId.split(':')[1])
     });
 
-    const sendMessage = (peerId: string, msg: RelayMessage) => {
+    const sendMessage = (peerId: string, msg: RelayMessage | ClientMessage) => {
         const { host, port } = getAddress(peerId);
         const message = Buffer.from(JSON.stringify(msg));
 
@@ -42,9 +42,9 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
     const advertise = async () => await sendMessage(relayId, { type: 'advertise', value: username});
     const getPeerInfo = async (peer: string) => await sendMessage(relayId, { type: 'holePunch', value: peer });
     const post = async (peerId: string, message: string) => await sendMessage(peerId, { type: 'post', value: message });
-    const connect = async (peerId: string) => await sendMessage(relayId, {
-        type: 'connect',
-        value: JSON.stringify({ peerId, username }) 
+    const connect = async (peerId: string) => await sendMessage(peerId, {
+        type: 'connection',
+        message: username 
     });
 
     return { ping, advertise, getPeerInfo, connect, post };

@@ -1,21 +1,20 @@
 import dGram from "dgram";
 import peerStore from './store';
-import { IncomingMessage, OutgoingMessage } from "./utils/types";
+import { RelayMessage, ClientMessage } from "./utils/types";
 
 (() => {
     const { getPeer, addPeer } = peerStore();
     const sock = dGram.createSocket('udp4');
-    const port = parseInt(process.env.port || "23232"); 
+    const PORT = parseInt(process.env.port || "23232");
 
     sock.on("listening", () => {
-        console.log(`UDP socket listening on port ${port}`);
+        console.log(`UDP socket listening on port ${PORT}`);
     });
 
     const sendMessage = (
-        type: OutgoingMessage["type"],
+        type: ClientMessage["type"],
         nodeId: string,
-        peerId?: string,
-        message?: string
+        peerId?: string
     ) => {
         const formatMessage = (message: string): Buffer =>
             Buffer.from(JSON.stringify({ type, message }), 'utf-8');
@@ -24,6 +23,8 @@ import { IncomingMessage, OutgoingMessage } from "./utils/types";
             const recepientId = to && to === 'peer' ? peerId : nodeId;
             const host = recepientId && recepientId.split(':')[0];
             const port = recepientId && Number(recepientId.split(':')[1]);
+
+            console.log(type, recepientId, host, port);
 
             if (!host || !port) {
                 throw new Error('Incorrectly formatted recepientId!');
@@ -38,16 +39,16 @@ import { IncomingMessage, OutgoingMessage } from "./utils/types";
                 break;
             }
             case 'ack': {
-                if (!nodeId || !getPeer(nodeId)) {
+                if (!nodeId) {
                     throw new Error('NodeId not found! Dropping message.');
                 }
 
                 send(formatMessage(nodeId));
                 break;
             }
-            case 'holePunch': {
-                if (!message || !peerId || !getPeer(peerId) || !getPeer(nodeId)) {
-                    throw new Error('Node or peer not found! Dropping messages.'); 
+            case 'peerInfo': {
+                if (!nodeId || !peerId) {
+                    throw new Error('Node or peer not found!');
                 }
 
                 send(formatMessage(peerId));
@@ -58,18 +59,19 @@ import { IncomingMessage, OutgoingMessage } from "./utils/types";
                 throw new Error('Unrecognized outgoing message type!');
             }
         }
-    } 
+    }
 
     sock.on("message", (_message, rinfo) => {
 
-        const message = JSON.parse(Buffer.from(_message).toString()) as IncomingMessage;
+        const message = JSON.parse(Buffer.from(_message).toString()) as RelayMessage;
+        const nodeId = `${rinfo.address}:${rinfo.port}`;
 
         switch(message.type) {
             case 'ping': {
-                sendMessage('pong', `${rinfo.address}:${rinfo.port}`);
+                sendMessage('pong', nodeId);
+                break;
             }
             case 'advertise': {
-                const nodeId = `${rinfo.address}:${rinfo.port}`;
                 const username = message.value || '';
                 if (!username) {
                     return;
@@ -79,14 +81,17 @@ import { IncomingMessage, OutgoingMessage } from "./utils/types";
 
                 addPeer(username, nodeId);
                 sendMessage('ack', nodeId);
+                break;
             }
-            case 'connect': {
-                const nodeId = `${rinfo.address}:${rinfo.port}`;
-                const peerId = message.value ?? message.value;
+            case 'holePunch': {
+                const peerId = getPeer(message.value);
+                console.log(`Connection request received! Peer: ${peerId}`);
 
-                if (peerId && getPeer(peerId)) {
-                    sendMessage('holePunch', nodeId, peerId);
+                if (peerId) {
+                    sendMessage('peerInfo', nodeId, peerId);
                 }
+
+                break;
             }
             default: {
                 throw new Error('Unrecognized incoming message type!');
@@ -99,5 +104,5 @@ import { IncomingMessage, OutgoingMessage } from "./utils/types";
         sock.close();
     });
 
-    sock.bind(port);
+    sock.bind(PORT);
 })();
