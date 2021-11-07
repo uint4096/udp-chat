@@ -1,4 +1,4 @@
-import { Address, IncomingMessage } from "../../utils/types";
+import { Address, RelayMessage } from "../../utils/types";
 import { Socket } from "dgram";
 
 export const messageHelpers = (username: string, socket: Socket, relayId: string) => {
@@ -27,7 +27,7 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
         port: Number(nodeId.split(':')[1])
     });
 
-    const sendMessage = (peerId: string, msg: IncomingMessage) => {
+    const sendMessage = (peerId: string, msg: RelayMessage) => {
         const { host, port } = getAddress(peerId);
         const message = Buffer.from(JSON.stringify(msg));
 
