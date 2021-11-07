@@ -4,7 +4,7 @@ const store = () => {
     const addPeer = (key: string, value: string) => store.set(key, value);
     const getPeer = (key: string) => {
         if (store.has(key)) {
-            return key;
+            return store.get(key);
         }
     };
     const removePeer = (key: string) => store.delete(key);

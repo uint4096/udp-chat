@@ -4,7 +4,7 @@ export interface RelayMessage {
 };
 
 export interface ClientMessage {
-    type: 'pong' | 'ack' | 'peerInfo' | 'connection' | 'post',
+    type: 'ping' | 'pong' | 'ack' | 'peerInfo' | 'connection' | 'post',
     message: string;
 };
 

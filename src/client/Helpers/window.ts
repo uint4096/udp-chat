@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { constants, openSync } from 'fs';
+import { constants, existsSync, openSync } from 'fs';
 import { Writable } from 'stream';
 import { Socket } from 'net';
 
@@ -18,7 +18,10 @@ const Writer = (messageWriter: MessageWriter, peerId: string) => new Writable({
 export const createChatWindow = (messageWriter: MessageWriter, peerId: string) => {
 
     const fifo = `/tmp/in_${peerId}`;
-    exec(`mkfifo ${fifo}`);
+
+    if (!existsSync(fifo)) {
+        exec(`mkfifo ${fifo}`);
+    }
 
     /*
     * Specifying the flag for both read and write (O_RDWR) so that

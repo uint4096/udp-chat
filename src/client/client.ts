@@ -17,7 +17,7 @@ import * as pkg from '../../package.json'
         const sock = dGram.createSocket('udp4');
         const PORT = parseInt(process.env.PORT || "23232");
 
-        const relayAddress = args.relay || process.env.RELAY_ADDRESS || '';
+        const relayAddress = args.relay || process.env.RELAY_ADDRESS;
         const peerUsername = args.peer;
         const username = args.username;
 
@@ -44,6 +44,7 @@ import * as pkg from '../../package.json'
             const senderId = `${rinfo.address}:${rinfo.port}`;
 
             switch (msg.type) {
+                case 'ping': { break; }
                 case 'pong': {
                     tracker.onPong(senderId);
                     break;
@@ -61,20 +62,22 @@ import * as pkg from '../../package.json'
                     break;
                 }
                 case 'connection': {
-                    const message = JSON.parse(msg.message);
-                    if (message && message.username) {
-                        addPeer(message.username, message.peerId);
+                    const username = msg.message;
+                    if (username) {
+                        addPeer(username, senderId);
 
-                        tracker.create(message.peerId);
-                        createChatWindow(post, message.peerId);
-                        console.log(`Connected to peer: ${message.username}`);
+                        tracker.create(senderId);
+                        createChatWindow(post, senderId);
+                        console.log(`Connected to peer: ${username}`);
                     }
 
                     break;
                 }
                 case 'post': {
                     const fifo = `/tmp/in_${senderId}`;
-                    execSync(`echo ${msg.message} > ${fifo}`);
+                    execSync(`echo ${msg.message} >> ${fifo}`, { stdio: 'inherit' });
+
+                    break;
                 }
                 default: {
                     throw new Error(`Unrecognized message type ${msg.type}!`);

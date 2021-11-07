@@ -41,11 +41,8 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
     const ping = async (peerId: string) => await sendMessage(peerId, { type: 'ping', value: '' });
     const advertise = async () => await sendMessage(relayId, { type: 'advertise', value: username});
     const getPeerInfo = async (peer: string) => await sendMessage(relayId, { type: 'holePunch', value: peer });
-    const post = async (peerId: string, message: string) => await sendMessage(peerId, { type: 'post', value: message });
-    const connect = async (peerId: string) => await sendMessage(peerId, {
-        type: 'connection',
-        message: username 
-    });
+    const post = async (peerId: string, message: string) => await sendMessage(peerId, { type: 'post', message });
+    const connect = async (peerId: string) => await sendMessage(peerId, { type: 'connection', message: username });
 
     return { ping, advertise, getPeerInfo, connect, post };
 }
