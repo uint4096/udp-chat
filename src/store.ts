@@ -8,13 +8,13 @@ const store = () => {
         }
     };
     const removePeer = (key: string) => store.delete(key);
-    const getAllPeers = () => store.values();
+    const connectionsCount = () => store.size;
     
     return {
         addPeer,
         getPeer,
         removePeer,
-        getAllPeers
+        connectionsCount
     };
 };
 

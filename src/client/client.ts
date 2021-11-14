@@ -2,15 +2,14 @@
 
 import dGram from "dgram";
 import { ClientMessage } from "../utils/types";
-import PeerStore from '../store';
-import { messageHelpers } from "./Helpers/messages";
-import { connectionTracker } from "./Helpers/intervals";
+import ConnectionStore from '../store';
+import { createMessenger } from "./Helpers/messages";
+import { connectionTracker as ConnectionTracker } from "./Helpers/tracker";
 import { createChatWindow } from "./Helpers/window";
 import minimist from 'minimist';
 import { HELP_CONTENT } from "../utils/constants";
 import * as pkg from '../../package.json'
 import { openSync } from "fs";
-import { O_NONBLOCK, O_WRONLY } from "constants";
 import { Socket } from "net";
 
 (() => {
@@ -35,17 +34,9 @@ import { Socket } from "net";
             throw new Error("Username must be specified. See 'p2pconnect --help'.");
         }
 
-        const { addPeer } = PeerStore();
-        const { 
-            ping,
-            pong,
-            advertise,
-            connect,
-            getPeerInfo,
-            post 
-        } = messageHelpers(username, sock, relayAddress);
-
-        const tracker = connectionTracker(ping);
+        const { addPeer, connectionsCount } = ConnectionStore();
+        const messenger = createMessenger(username, sock, relayAddress);
+        const tracker = ConnectionTracker(messenger.send);
 
         sock.on("message", async (_msg, rinfo) => {
             const msg = JSON.parse(Buffer.from(_msg).toString('utf-8')) as ClientMessage;
@@ -53,7 +44,7 @@ import { Socket } from "net";
 
             switch (msg.type) {
                 case 'ping': {
-                    pong(senderId);
+                    messenger.send('pong', senderId);
                     break;
                 }
                 case 'pong': {
@@ -61,16 +52,28 @@ import { Socket } from "net";
                     break;
                 }
                 case 'ack': {
-                    tracker.create(relayAddress);
                     if (peerUsername) {
-                        await getPeerInfo(peerUsername);
+                        await messenger.getPeerInfo(peerUsername);
                     }
 
                     break;
                 }
+                case 'rejection': {
+                    if (senderId === relayAddress) {
+                        console.error("Username already exists!");
+                    } else {
+                        console.error("Connection rejected!");
+                    }
+
+                    process.exit(0);
+                }
                 case 'peerInfo': {
                     const peerId = msg.message;
-                    if (peerId) { await connect(peerId); }
+                    if (connectionsCount() > 0) {
+                        await messenger.send('rejection', peerId)
+                    }
+
+                    if (peerId) { await messenger.send('connection', peerId); }
 
                     break;
                 }
@@ -80,7 +83,7 @@ import { Socket } from "net";
                         addPeer(username, senderId);
 
                         tracker.create(senderId);
-                        createChatWindow(post, tracker.verify, senderId);
+                        createChatWindow(messenger.post, tracker.verify, senderId);
                         console.log(`Connected to peer: ${username}`);
                     }
 
@@ -88,10 +91,10 @@ import { Socket } from "net";
                 }
                 case 'post': {
                     const fifo = `/tmp/in_${senderId}`;
-                    const fd = openSync(fifo, O_WRONLY | O_NONBLOCK);
+                    const fd = openSync(fifo, 'w+');
                     const pipe = new Socket({ fd });
 
-                    pipe.write(`${new Date().toDateString()}> ${msg.message}`);
+                    pipe.write(`${peerUsername}> ${msg.message}`);
                     pipe.destroy();
                     break;
                 }
@@ -102,12 +105,12 @@ import { Socket } from "net";
         });
 
         sock.on("listening", async () => {
-            console.log(`UDP socket listening on port ${PORT}`);
-            await advertise();
+            console.log(`Listening for connections.`);
+            await messenger.advertise();
         });
 
         sock.on("error", (err) => {
-            console.log(`Connection closed. Error: ${err}.`);
+            console.error(`Connection closed. Error: ${err}.`);
             sock.close();
         });
 

@@ -1,7 +1,7 @@
 import { Address, ClientMessage, RelayMessage } from "../../utils/types";
 import { Socket } from "dgram";
 
-export const messageHelpers = (username: string, socket: Socket, relayId: string) => {
+export const createMessenger = (username: string, socket: Socket, relayId: string) => {
 
     const promisifySend = (
         ...args: [
@@ -38,12 +38,25 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
         return Promise.resolve();
     };
 
-    const ping = async (peerId: string) => await sendMessage(peerId, { type: 'ping', message: '' });
-    const pong = async (peerId: string) => await sendMessage(peerId, { type: 'pong', message: '' });
-    const advertise = async () => await sendMessage(relayId, { type: 'advertise', value: username});
-    const getPeerInfo = async (peer: string) => await sendMessage(relayId, { type: 'holePunch', value: peer });
-    const post = async (peerId: string, message: string) => await sendMessage(peerId, { type: 'post', message });
-    const connect = async (peerId: string) => await sendMessage(peerId, { type: 'connection', message: username });
+    return {
+        send: async (
+            type: Exclude<ClientMessage["type"], 'ack' | 'peerInfo' | 'post'>,
+            peerId: string
+        ) => await sendMessage(peerId, { type, message: username }),
 
-    return { ping, pong, advertise, getPeerInfo, connect, post };
+        advertise: async () => await sendMessage(relayId, {
+            type: 'advertise',
+            value: username
+        }),
+
+        getPeerInfo: async (peer: string) => await sendMessage(relayId, {
+            type: 'holePunch',
+            value: peer
+        }),
+
+        post: async (peerId: string, message: string) => await sendMessage(peerId, {
+            type: 'post',
+            message
+        })
+    };
 }

@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { constants, existsSync, openSync } from 'fs';
+import { existsSync, openSync } from 'fs';
 import { Writable } from 'stream';
 import { Socket } from 'net';
 
@@ -17,7 +17,7 @@ const Writer = (
     write: async (chunk, _, callback) => {
         const message = Buffer.from(chunk).toString();
         if (!verifyConnection()) {
-            const err = new Error("Peer is not responding.");
+            const err = new Error("Peer unresponsive.");
             callback(err);
         } else {
             await messageWriter(peerId, message);
@@ -30,31 +30,29 @@ export const createChatWindow = (...args: Args) => {
 
     const fifo = `/tmp/in_${args[2]}`;
 
-    if (!existsSync(fifo)) {
-        exec(`mkfifo ${fifo}`);
+    if (existsSync(fifo)) {
+        exec(`rm ${fifo}`);
     }
 
+    exec(`mkfifo ${fifo}`);
+
     /*
-    * Specifying the flag for both read and write (O_RDWR) so that
+    * Specifying the flag for both read and write so that
     * there's atleast one writer open and EOF isn't recieved after the first
     * message.
     */
-    const fd = openSync(fifo, constants.O_RDWR | constants.O_NONBLOCK);
+    const fd = openSync(fifo, 'r+');
     const pipe = new Socket({ fd });
 
     const terminateProcess = () => {
-        console.log("Connection closed");
+        console.log("Connection closed.");
         pipe.destroy();
         exec(`rm ${fifo}`);
         process.exit(0);
     };
 
-    pipe.on("connect", () => {
-        console.log("Connection established!");
-    });
-
-    pipe.on("data", (data) => {
-        console.log(data);
+    pipe.on("data", (data: Buffer) => {
+        console.log(Buffer.from(data).toString());
     });
 
     const stream = Writer(...args);

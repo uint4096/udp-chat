@@ -1,10 +1,21 @@
 export interface RelayMessage {
-    type: 'connect' | 'advertise' | 'holePunch' | 'post',
+    type:
+        | 'connect'
+        | 'advertise'
+        | 'holePunch'
+        | 'post',
     value: string;
 };
 
 export interface ClientMessage {
-    type: 'ping' | 'pong' | 'ack' | 'peerInfo' | 'connection' | 'post',
+    type: 
+        | 'ping'
+        | 'pong'
+        | 'ack'
+        | 'peerInfo'
+        | 'connection'
+        | 'post'
+        | 'rejection',
     message: string;
 };
 

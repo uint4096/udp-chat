@@ -3,3 +3,5 @@ p2pconnect [--help] [--version | -v] [--peer | -p = <recepient-username>] [--use
 Example usage: \n \
 Connect to a peer with username "bob": \n\
 connect --peer bob --username alice';
+
+export const PING_INTERVAL = 30000;

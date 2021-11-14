@@ -55,6 +55,10 @@ import { RelayMessage, ClientMessage } from "./utils/types";
                 send(formatMessage(nodeId), 'peer');
                 break;
             }
+            case 'rejection': {
+                send(formatMessage(nodeId));
+                break;
+            }
             default: {
                 throw new Error('Unrecognized outgoing message type!');
             }
@@ -71,6 +75,8 @@ import { RelayMessage, ClientMessage } from "./utils/types";
                 const username = message.value || '';
                 if (!username) {
                     return;
+                } else if (getPeer(username)) {
+                    sendMessage("rejection", nodeId);
                 }
 
                 console.log(`Message received. nodeId: ${nodeId}`);
