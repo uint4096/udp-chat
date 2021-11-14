@@ -38,11 +38,12 @@ export const messageHelpers = (username: string, socket: Socket, relayId: string
         return Promise.resolve();
     };
 
-    const ping = async (peerId: string) => await sendMessage(peerId, { type: 'ping', value: '' });
+    const ping = async (peerId: string) => await sendMessage(peerId, { type: 'ping', message: '' });
+    const pong = async (peerId: string) => await sendMessage(peerId, { type: 'pong', message: '' });
     const advertise = async () => await sendMessage(relayId, { type: 'advertise', value: username});
     const getPeerInfo = async (peer: string) => await sendMessage(relayId, { type: 'holePunch', value: peer });
     const post = async (peerId: string, message: string) => await sendMessage(peerId, { type: 'post', message });
     const connect = async (peerId: string) => await sendMessage(peerId, { type: 'connection', message: username });
 
-    return { ping, advertise, getPeerInfo, connect, post };
+    return { ping, pong, advertise, getPeerInfo, connect, post };
 }

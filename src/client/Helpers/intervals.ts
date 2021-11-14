@@ -1,41 +1,36 @@
-import PeerStore from '../../store';
-
-const pings = new Map<string, NodeJS.Timer>();
-const counters = new Map<string, number>();
-
 const interval = 5000;
 
 export const connectionTracker = (
-    pingFunc: (peerId: string) => Promise<unknown>
+    pingFunc: (peerId: string) => Promise<unknown>,
 ) => {
 
-    const checkConnection = (peerId: string) => {
-        if (counters.has(peerId) && (counters.get(peerId) as number) <= 5) {
-            return true;
-        }
+    let pingCount: number, pongCount: number = 0, pingInterval: NodeJS.Timer;
+
+    const create = (peerId: string) => {
+        pingInterval = setInterval(async () => {
+            await pingFunc(peerId);
+            pingCount += 1;
+        }, interval);
     };
 
-    const create = (peerId: string) =>
-        pings.set(
-            peerId,
-            setInterval(async () => {
-                await pingFunc(peerId);
+    const onPong = () => {
+        pongCount += 1;
+    }
 
-                if (!counters.has(peerId)) {
-                    counters.set(peerId, 0);
-                }
+    const verify = () => {
+        if (pongCount <= pingCount + 5) {
+            console.log("Connection broken!");
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
 
-                counters.set(peerId, counters.get(peerId) as number + 1);
-            }, interval)
-        );
-
-    const onPong = (peerId: string) => {
-        if (counters.has(peerId)) {
-            counters.set(peerId, counters.get(peerId) as number - 1);
+            return false;
         }
+
+        return true;
     };
 
-    return { create, onPong, checkConnection };
+       return { onPong, create, verify };
 }
     
 

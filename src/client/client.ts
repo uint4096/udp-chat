@@ -6,10 +6,12 @@ import PeerStore from '../store';
 import { messageHelpers } from "./Helpers/messages";
 import { connectionTracker } from "./Helpers/intervals";
 import { createChatWindow } from "./Helpers/window";
-import { execSync } from "child_process";
 import minimist from 'minimist';
 import { HELP_CONTENT } from "../utils/constants";
 import * as pkg from '../../package.json'
+import { openSync } from "fs";
+import { O_NONBLOCK, O_WRONLY } from "constants";
+import { Socket } from "net";
 
 (() => {
     try {
@@ -29,13 +31,19 @@ import * as pkg from '../../package.json'
             return;
         }
 
-        if (!peerUsername) {
-            throw new Error("Peer must be specified. See 'connect --help'.");
+        if (!username) {
+            throw new Error("Username must be specified. See 'p2pconnect --help'.");
         }
 
         const { addPeer } = PeerStore();
-        const { ping, advertise, connect, getPeerInfo, post }
-            = messageHelpers(username, sock, relayAddress);
+        const { 
+            ping,
+            pong,
+            advertise,
+            connect,
+            getPeerInfo,
+            post 
+        } = messageHelpers(username, sock, relayAddress);
 
         const tracker = connectionTracker(ping);
 
@@ -44,14 +52,19 @@ import * as pkg from '../../package.json'
             const senderId = `${rinfo.address}:${rinfo.port}`;
 
             switch (msg.type) {
-                case 'ping': { break; }
+                case 'ping': {
+                    pong(senderId);
+                    break;
+                }
                 case 'pong': {
-                    tracker.onPong(senderId);
+                    tracker.onPong();
                     break;
                 }
                 case 'ack': {
                     tracker.create(relayAddress);
-                    await getPeerInfo(peerUsername);
+                    if (peerUsername) {
+                        await getPeerInfo(peerUsername);
+                    }
 
                     break;
                 }
@@ -67,7 +80,7 @@ import * as pkg from '../../package.json'
                         addPeer(username, senderId);
 
                         tracker.create(senderId);
-                        createChatWindow(post, senderId);
+                        createChatWindow(post, tracker.verify, senderId);
                         console.log(`Connected to peer: ${username}`);
                     }
 
@@ -75,8 +88,11 @@ import * as pkg from '../../package.json'
                 }
                 case 'post': {
                     const fifo = `/tmp/in_${senderId}`;
-                    execSync(`echo ${msg.message} >> ${fifo}`, { stdio: 'inherit' });
+                    const fd = openSync(fifo, O_WRONLY | O_NONBLOCK);
+                    const pipe = new Socket({ fd });
 
+                    pipe.write(`${new Date().toDateString()}> ${msg.message}`);
+                    pipe.destroy();
                     break;
                 }
                 default: {

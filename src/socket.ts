@@ -67,10 +67,6 @@ import { RelayMessage, ClientMessage } from "./utils/types";
         const nodeId = `${rinfo.address}:${rinfo.port}`;
 
         switch(message.type) {
-            case 'ping': {
-                sendMessage('pong', nodeId);
-                break;
-            }
             case 'advertise': {
                 const username = message.value || '';
                 if (!username) {
