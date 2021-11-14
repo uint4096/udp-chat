@@ -9,12 +9,19 @@ const store = () => {
     };
     const removePeer = (key: string) => store.delete(key);
     const connectionsCount = () => store.size;
+    const getPeerById = (id: string) => {
+        const entry = Array.from(store.entries()).find((peer) => peer[1] === id);
+        if (entry) {
+            return entry[0];
+        }
+    };
     
     return {
         addPeer,
         getPeer,
         removePeer,
-        connectionsCount
+        connectionsCount,
+        getPeerById
     };
 };
 

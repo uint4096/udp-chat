@@ -5,7 +5,11 @@ import { Socket } from 'net';
 
 type MessageWriter = (peerId: string, message: string) => Promise<unknown>;
 type VerifyConnection = () => boolean;
-type Args = [MessageWriter, VerifyConnection, string];
+type Args = [
+    messageWriter: MessageWriter,
+    verifyConnection: VerifyConnection,
+    peerId: string
+];
 
 const exec = (cmd: string, dir = process.cwd()) => execSync(cmd, { cwd: dir, stdio: 'inherit' });
 

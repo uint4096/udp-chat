@@ -18,7 +18,7 @@ export const connectionTracker = (
     }
 
     const verify = () => {
-        if (pingCount > (pongCount + 5)) {
+        if (pingCount > (pongCount + 3)) {
             console.log("Connection broken!");
             if (pingTimer) {
                 clearInterval(pingTimer);

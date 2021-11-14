@@ -19,8 +19,8 @@ import { Socket } from "net";
         const PORT = parseInt(process.env.PORT || "23232");
 
         const relayAddress = args.relay || process.env.RELAY_ADDRESS;
-        const peerUsername = args.peer;
-        const username = args.username;
+        const peerUsername = args.peer || args.p;
+        const username = args.username || args.u;
 
         if (args.help) {
             console.log(HELP_CONTENT);
@@ -34,7 +34,7 @@ import { Socket } from "net";
             throw new Error("Username must be specified. See 'p2pconnect --help'.");
         }
 
-        const { addPeer, connectionsCount } = ConnectionStore();
+        const { addPeer, connectionsCount, getPeerById } = ConnectionStore();
         const messenger = createMessenger(username, sock, relayAddress);
         const tracker = ConnectionTracker(messenger.send);
 
@@ -94,7 +94,12 @@ import { Socket } from "net";
                     const fd = openSync(fifo, 'w+');
                     const pipe = new Socket({ fd });
 
-                    pipe.write(`${peerUsername}> ${msg.message}`);
+                    const peer =  getPeerById(senderId);
+
+                    if (peer) {
+                        pipe.write(`${peer}> ${msg.message}`);
+                    }
+
                     pipe.destroy();
                     break;
                 }
