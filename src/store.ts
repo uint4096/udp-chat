@@ -1,15 +1,15 @@
-const store = () => {
+const store = <T = string>() => {
     const store = new Map();
 
-    const addPeer = (key: string, value: string) => store.set(key, value);
-    const getPeer = (key: string) => {
+    const add = (key: string, value: T) => store.set(key, value);
+    const get = (key: string): T | undefined => {
         if (store.has(key)) {
             return store.get(key);
         }
     };
-    const removePeer = (key: string) => store.delete(key);
-    const connectionsCount = () => store.size;
-    const getPeerById = (id: string) => {
+    const remove = (key: string) => store.delete(key);
+    const count = () => store.size;
+    const getByValue = (id: string): T | undefined => {
         const entry = Array.from(store.entries()).find((peer) => peer[1] === id);
         if (entry) {
             return entry[0];
@@ -17,11 +17,11 @@ const store = () => {
     };
     
     return {
-        addPeer,
-        getPeer,
-        removePeer,
-        connectionsCount,
-        getPeerById
+        add,
+        get,
+        remove,
+        count,
+        getByValue
     };
 };
 

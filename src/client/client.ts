@@ -2,7 +2,7 @@
 
 import dGram from "dgram";
 import { ClientMessage } from "../utils/types";
-import ConnectionStore from '../store';
+import store from '../store';
 import { createMessenger } from "./Helpers/messages";
 import { connectionTracker as ConnectionTracker } from "./Helpers/tracker";
 import { createChatWindow } from "./Helpers/window";
@@ -18,7 +18,7 @@ import { Socket } from "net";
         const sock = dGram.createSocket('udp4');
         const PORT = parseInt(process.env.PORT || "23232");
 
-        const relayAddress = args.relay || process.env.RELAY_ADDRESS;
+        const relayAddress = args.relay || process.env.RELAY;
         const peerUsername = args.peer || args.p;
         const username = args.username || args.u;
 
@@ -34,7 +34,7 @@ import { Socket } from "net";
             throw new Error("Username must be specified. See 'p2pconnect --help'.");
         }
 
-        const { addPeer, connectionsCount, getPeerById } = ConnectionStore();
+        const connectionStore = store();
         const messenger = createMessenger(username, sock, relayAddress);
         const nodeTracker = ConnectionTracker(messenger.send);
         const relayTracker = ConnectionTracker(messenger.send);
@@ -72,8 +72,8 @@ import { Socket } from "net";
                 }
                 case 'peerInfo': {
                     const peerId = msg.message;
-                    if (connectionsCount() > 0) {
-                        await messenger.send('rejection', peerId)
+                    if (connectionStore.count() > 0) {
+                        await messenger.send('rejection', peerId);
                     }
 
                     if (peerId) { await messenger.send('connection', peerId); }
@@ -83,7 +83,7 @@ import { Socket } from "net";
                 case 'connection': {
                     const username = msg.message;
                     if (username) {
-                        addPeer(username, senderId);
+                        connectionStore.add(username, senderId);
 
                         nodeTracker.create(senderId);
                         createChatWindow(messenger.post, nodeTracker.verify, senderId);
@@ -97,7 +97,7 @@ import { Socket } from "net";
                     const fd = openSync(fifo, 'w+');
                     const pipe = new Socket({ fd });
 
-                    const peer =  getPeerById(senderId);
+                    const peer =  connectionStore.get(senderId);
 
                     if (peer) {
                         pipe.write(`${peer}> ${msg.message}`);

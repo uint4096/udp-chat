@@ -17,11 +17,12 @@ export const connectionTracker = (
         pongCount += 1;
     }
 
-    const verify = () => {
+    const verify = (onBrokenConnection?: () => void) => {
         if (pingCount > (pongCount + 3)) {
             console.log("Connection broken!");
             if (pingTimer) {
                 clearInterval(pingTimer);
+                onBrokenConnection && onBrokenConnection();
             }
 
             return false;

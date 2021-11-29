@@ -1,5 +1,7 @@
 export interface RelayMessage {
     type:
+        | 'ping'
+        | 'pong'
         | 'connect'
         | 'advertise'
         | 'holePunch'
