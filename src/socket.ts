@@ -1,4 +1,6 @@
 import dGram from "dgram";
+import { createMessenger } from "./client/Helpers/messages";
+import { connectionTracker } from "./client/Helpers/tracker";
 import peerStore from './store';
 import { RelayMessage, ClientMessage } from "./utils/types";
 
@@ -16,26 +18,16 @@ import { RelayMessage, ClientMessage } from "./utils/types";
         nodeId: string,
         peerId?: string
     ) => {
-        const formatMessage = (message: string): Buffer =>
-            Buffer.from(JSON.stringify({ type, message }), 'utf-8');
-
-        const send = (msg: Buffer, to?: 'node' | 'peer') => {
-            const recepientId = to && to === 'peer' ? peerId : nodeId;
-            const host = recepientId && recepientId.split(':')[0];
-            const port = recepientId && Number(recepientId.split(':')[1]);
-
-            console.log(type, recepientId, host, port);
-
-            if (!host || !port) {
-                throw new Error('Incorrectly formatted recepientId!');
-            }
-
-            sock.send(msg, 0, msg.length, port, host);
-        };
+        const messenger = createMessenger('', sock);
+        const tracker = connectionTracker(messenger.send);
 
         switch (type) {
+            case 'ping': {
+                messenger.reply('pong', nodeId, '');
+                break;
+            }
             case 'pong': {
-                send(formatMessage(''));
+                tracker.onPong();
                 break;
             }
             case 'ack': {
@@ -43,7 +35,8 @@ import { RelayMessage, ClientMessage } from "./utils/types";
                     throw new Error('NodeId not found! Dropping message.');
                 }
 
-                send(formatMessage(nodeId));
+                tracker.create(nodeId);
+                messenger.reply('ack', nodeId, nodeId);
                 break;
             }
             case 'peerInfo': {
@@ -51,12 +44,12 @@ import { RelayMessage, ClientMessage } from "./utils/types";
                     throw new Error('Node or peer not found!');
                 }
 
-                send(formatMessage(peerId));
-                send(formatMessage(nodeId), 'peer');
+                messenger.reply('peerInfo', nodeId, peerId);
+                messenger.reply('peerInfo', peerId, nodeId);
                 break;
             }
             case 'rejection': {
-                send(formatMessage(nodeId));
+                messenger.reply('peerInfo', nodeId, nodeId);
                 break;
             }
             default: {

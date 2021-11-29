@@ -36,7 +36,8 @@ import { Socket } from "net";
 
         const { addPeer, connectionsCount, getPeerById } = ConnectionStore();
         const messenger = createMessenger(username, sock, relayAddress);
-        const tracker = ConnectionTracker(messenger.send);
+        const nodeTracker = ConnectionTracker(messenger.send);
+        const relayTracker = ConnectionTracker(messenger.send);
 
         sock.on("message", async (_msg, rinfo) => {
             const msg = JSON.parse(Buffer.from(_msg).toString('utf-8')) as ClientMessage;
@@ -48,10 +49,12 @@ import { Socket } from "net";
                     break;
                 }
                 case 'pong': {
-                    tracker.onPong();
+                    nodeTracker.onPong();
+                    relayTracker.onPong();
                     break;
                 }
                 case 'ack': {
+                    relayTracker.create(relayAddress);
                     if (peerUsername) {
                         await messenger.getPeerInfo(peerUsername);
                     }
@@ -82,8 +85,8 @@ import { Socket } from "net";
                     if (username) {
                         addPeer(username, senderId);
 
-                        tracker.create(senderId);
-                        createChatWindow(messenger.post, tracker.verify, senderId);
+                        nodeTracker.create(senderId);
+                        createChatWindow(messenger.post, nodeTracker.verify, senderId);
                         console.log(`Connected to peer: ${username}`);
                     }
 

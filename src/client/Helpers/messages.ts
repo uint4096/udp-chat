@@ -1,7 +1,7 @@
 import { Address, ClientMessage, RelayMessage } from "../../utils/types";
 import { Socket } from "dgram";
 
-export const createMessenger = (username: string, socket: Socket, relayId: string) => {
+export const createMessenger = (username: string, socket: Socket, relayId?: string) => {
 
     const promisifySend = (
         ...args: [
@@ -44,12 +44,18 @@ export const createMessenger = (username: string, socket: Socket, relayId: strin
             peerId: string
         ) => await sendMessage(peerId, { type, message: username }),
 
-        advertise: async () => await sendMessage(relayId, {
+        reply: async (
+            type: Exclude<ClientMessage["type"], 'connection' | 'post'>,
+            recepientId: string,
+            message: string
+        ) => await sendMessage(recepientId, { type, message }),
+
+        advertise: async () => relayId && await sendMessage(relayId, {
             type: 'advertise',
             value: username
         }),
 
-        getPeerInfo: async (peer: string) => await sendMessage(relayId, {
+        getPeerInfo: async (peer: string) => relayId && await sendMessage(relayId, {
             type: 'holePunch',
             value: peer
         }),
